@@ -127,7 +127,7 @@ const q = {
   log: db.prepare("INSERT INTO activity (at, who, project_id, text) VALUES (?, ?, ?, ?)"),
   lastSync: db.prepare("SELECT * FROM sync_runs ORDER BY id DESC LIMIT 1"),
   syncRun: db.prepare("INSERT INTO sync_runs (at, added, updated) VALUES (?, ?, ?)"),
-  filesAll: db.prepare("SELECT id, project_id, name, label, size, mime, sha, source, created_at FROM files ORDER BY created_at"),
+  filesAll: db.prepare("SELECT f.id, f.project_id, f.name, f.label, f.size, f.mime, f.sha, f.source, f.created_at FROM files f JOIN projects p ON p.id = f.project_id WHERE p.status != 'purged' ORDER BY f.created_at"),
   fileGet: db.prepare("SELECT * FROM files WHERE id = ?"),
   fileBySha: db.prepare("SELECT id FROM files WHERE project_id = ? AND sha = ?"),
   fileAdd: db.prepare("INSERT INTO files (id, project_id, name, label, size, mime, sha, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"),
@@ -193,7 +193,7 @@ function sanitizeLinks(list) {
 }
 
 function sanitizeAccess(list) {
-  return JSON.stringify(list.slice(0, 40).map((a) => ({ id: clip(a.id || randomBytes(4).toString("hex"), 16), label: clip(a.label, 120), url: clip(a.url, 500),
+  return JSON.stringify(list.slice(0, 40).map((a) => ({ id: clip(a.id || randomBytes(4).toString("hex"), 16), label: clip(a.label, 120), url: /^https?:\/\//i.test(String(a.url || "")) ? clip(a.url, 500) : "",
     login: clip(a.login, 200), password: clip(a.password, 300), note: clip(a.note, 500) })).filter((a) => a.label || a.login || a.password));
 }
 function sanitizePassport(p) {
@@ -204,7 +204,7 @@ function sanitizePassport(p) {
     done: arr(p.done, 60, (x) => str(x, 600)), next: arr(p.next, 30, (x) => str(x, 600)),
     contacts: arr(p.contacts, 20, (c) => ({ label: str(c.label, 80), value: str(c.value, 200), url: /^https?:\/\/|^mailto:|^tel:/.test(c.url || "") ? str(c.url, 500) : "" })),
     links: arr(p.links, 40, (l) => ({ label: str(l.label, 120), url: str(l.url, 500), note: str(l.note, 300), ok: l.ok !== false })).filter((l) => /^https?:\/\//.test(l.url)),
-    access: arr(p.access, 40, (a) => ({ label: str(a.label, 120), url: str(a.url, 500), login: str(a.login, 200), password: str(a.password, 300), note: str(a.note, 500) })),
+    access: arr(p.access, 40, (a) => ({ label: str(a.label, 120), url: /^https?:\/\//i.test(String(a.url || "")) ? str(a.url, 500) : "", login: str(a.login, 200), password: str(a.password, 300), note: str(a.note, 500) })),
     where: arr(p.where, 30, (w) => ({ label: str(w.label, 120), value: str(w.value, 500) })),
   });
 }
@@ -406,8 +406,12 @@ const server = http.createServer(async (req, res) => {
         const t = now();
         const ids = Array.isArray(b.ids) ? b.ids.slice(0, 500).map((x) => clip(x, 80)) : [];
         for (const id of ids) {
-          db.prepare("UPDATE projects SET status = 'purged', purged_at = ?, body = '', updated_at = ? WHERE id = ? AND status = 'dropped'").run(t, t, id);
-          q.log.run(t, "vlad", id, "Влад удалил проект из памяти Claude");
+          const r = db.prepare(`UPDATE projects SET status = 'purged', purged_at = ?, body = '', summary = '', passport = '{}', access = '[]', notes = '',
+            mem_links = '[]', links = '[]', checklist = '[]', updated_at = ? WHERE id = ? AND status = 'dropped'`).run(t, t, id);
+          if (!r.changes) continue;
+          for (const f of db.prepare("SELECT id FROM files WHERE project_id = ?").all(id)) { try { unlinkSync(join(FILES_DIR, f.id)); } catch { /* уже нет */ } }
+          db.prepare("DELETE FROM files WHERE project_id = ?").run(id);
+          q.log.run(t, "vlad", id, "Влад удалил проект из памяти Claude, данные и файлы стёрты");
         }
         return send(res, 200, { ok: true, purged: ids.length }, "");
       }
@@ -425,7 +429,7 @@ const server = http.createServer(async (req, res) => {
       }
       if (path === "/sync/file" && req.method === "POST") {
         const pid = clip(url.searchParams.get("project"), 80);
-        if (!q.project.get(pid)) return send(res, 404, { error: "no project" }, "");
+        if (q.project.get(pid)?.status !== "active" && q.project.get(pid)?.status !== "inbox" && q.project.get(pid)?.status !== "dropped") return send(res, 404, { error: "no project" }, "");
         const f = saveFile(pid, hdr(req, "x-file-name"), hdr(req, "x-file-label"), await readRaw(req, MAX_FILE), "claude");
         return send(res, 200, f, "");
       }
@@ -470,7 +474,7 @@ const server = http.createServer(async (req, res) => {
 
     m = /^\/projects\/([A-Za-z0-9_-]+)\/files$/.exec(path);
     if (m && req.method === "POST") {
-      if (!q.project.get(m[1])) return send(res, 404, { error: "Проект не найден" }, origin);
+      if (!q.project.get(m[1]) || q.project.get(m[1]).status === "purged") return send(res, 404, { error: "Проект не найден" }, origin);
       const f = saveFile(m[1], hdr(req, "x-file-name"), hdr(req, "x-file-label"), await readRaw(req, MAX_FILE), user.login);
       q.log.run(now(), user.login, m[1], `Загружен файл ${f.name}`);
       return send(res, 200, f, origin);

@@ -169,7 +169,7 @@ function Overview({p, save, busy}: {p: Project; save: (patch: Record<string, unk
         {!!pass.contacts?.length && (
           <HStack gap={2} wrap="wrap">
             {pass.contacts.map((c) => (
-              <a key={c.label + c.value} className="pill" href={c.url || undefined} target="_blank" rel="noreferrer">
+              <a key={c.label + c.value} className="pill" href={/^(https?:|mailto:|tel:)/i.test(c.url || '') ? c.url : undefined} target="_blank" rel="noreferrer">
                 <span>{c.label}</span><b>{c.value}</b>
               </a>
             ))}
@@ -234,7 +234,7 @@ function LinksFiles({p, files, save}: {p: Project; files: Attachment[]; save: (p
           {all.map((l) => (
             <HStack key={l.url + l.label} gap={3} vAlign="center" className="row">
               <VStack gap={0} className="row__main">
-                <a className="linkrow" href={l.url} target="_blank" rel="noreferrer">
+                <a className="linkrow" href={/^https?:\/\//i.test(l.url) ? l.url : undefined} target="_blank" rel="noreferrer">
                   <b>{l.label}</b><ArrowTopRightOnSquareIcon aria-hidden="true" />
                 </a>
                 <Text size="sm" color="secondary" maxLines={1}>{l.url.replace(/^https?:\/\//, '')}{l.note ? `, ${l.note}` : ''}{!l.ok ? ', не открывается' : ''}</Text>
@@ -330,7 +330,7 @@ function AccessCard({a, onRemove}: {a: Access; onRemove?: () => void}) {
         <Text weight="semibold">{a.label}</Text>
         {onRemove && <Button label="Удалить доступ" variant="ghost" size="sm" isIconOnly icon={<TrashIcon />} onClick={onRemove} />}
       </HStack>
-      {a.url && <a className="access__url" href={a.url} target="_blank" rel="noreferrer">{a.url.replace(/^https?:\/\//, '')}</a>}
+      {/^https?:\/\//i.test(a.url) && <a className="access__url" href={a.url} target="_blank" rel="noreferrer">{a.url.replace(/^https?:\/\//, '')}</a>}
       {a.login && (
         <HStack className="access__row" vAlign="center" gap={2}>
           <span>Логин</span><code>{a.login}</code>
