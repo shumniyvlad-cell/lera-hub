@@ -12,7 +12,7 @@ import {TabList, Tab} from '@astryxdesign/core/TabList';
 import {useToast} from '@astryxdesign/core/Toast';
 import {MagnifyingGlassIcon, PlusIcon} from '@heroicons/react/24/outline';
 import {createProject, saveProject, useData} from '../store';
-import {KIND_HINT, KIND_NAME, type Kind, type Project} from '../model';
+import {KIND_HINT, KIND_NAME, nextOf, type Kind, type Project} from '../model';
 import {Page} from '../parts';
 
 export function Projects({kind, onOpen}: {kind: Kind; onOpen: (id: string) => void}) {
@@ -25,7 +25,7 @@ export function Projects({kind, onOpen}: {kind: Kind; onOpen: (id: string) => vo
   const list = useMemo(() => {
     const s = q.trim().toLowerCase();
     return data.projects.filter((p) => p.status === 'active' && p.kind === kind &&
-      (!s || `${p.title} ${p.client} ${p.next_step} ${p.summary}`.toLowerCase().includes(s)));
+      (!s || `${p.title} ${p.client} ${p.next_step} ${p.summary} ${p.passport?.about || ''}`.toLowerCase().includes(s)));
   }, [data.projects, kind, q]);
 
   const drop = async (stage: string, id: string) => {
@@ -85,7 +85,7 @@ export function ProjectCard({p, onOpen}: {p: Project; onOpen: (id: string) => vo
           {p.is_fresh && <Badge label="новое" variant="teal" />}
         </HStack>
         {p.client && !p.title.includes(p.client.split(/[ ,]/)[0]) && <Text size="sm" color="secondary" maxLines={1}>{p.client}</Text>}
-        {p.next_step && <Text size="sm" maxLines={2} className="pcard__next">{p.next_step}</Text>}
+        {nextOf(p) && <Text size="sm" maxLines={2} className="pcard__next">{nextOf(p)}</Text>}
         {p.checklist.length > 0 && (
           <Text size="sm" color="secondary" hasTabularNumbers>Чек-лист {done} из {p.checklist.length}</Text>
         )}

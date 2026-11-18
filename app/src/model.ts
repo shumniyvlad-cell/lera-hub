@@ -5,6 +5,17 @@ export type Status = 'inbox' | 'active' | 'dropped' | 'purged';
 export type Link = {label: string; url: string};
 export type Check = {id: string; text: string; done: boolean};
 
+export type Access = {id?: string; label: string; url: string; login: string; password: string; note: string};
+export type Passport = {
+  about?: string; offer?: string; status?: string; money?: string; updated?: string;
+  done?: string[]; next?: string[];
+  contacts?: {label: string; value: string; url: string}[];
+  links?: {label: string; url: string; note: string; ok: boolean}[];
+  access?: Access[];
+  where?: {label: string; value: string}[];
+};
+export type Attachment = {id: string; project_id: string; name: string; label: string; size: number; mime: string; source: string; created_at: string};
+
 export type Project = {
   id: string;
   title: string;
@@ -15,10 +26,13 @@ export type Project = {
   summary: string;
   body: string;
   links: Link[];
+  mem_links: Link[];
   files: string[];
   next_step: string;
   notes: string;
   checklist: Check[];
+  passport: Passport;
+  access: Access[];
   source: 'memory' | 'manual';
   is_fresh: boolean;
   drop_reason: string;
@@ -55,6 +69,7 @@ export type State = {
   purged: Pick<Project, 'id' | 'title' | 'kind' | 'client' | 'drop_reason' | 'dropped_at' | 'purged_at'>[];
   items: Item[];
   activity: Activity[];
+  attachments: Attachment[];
   lastSync: {at: string; added: number; updated: number} | null;
   serverTime: string;
 };
@@ -144,3 +159,6 @@ export const plural = (n: number, one: string, few: string, many: string) => {
   const m10 = n % 10, m100 = n % 100;
   return m10 === 1 && m100 !== 11 ? one : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? few : many;
 };
+
+export const fileSize = (n: number) => (n < 1024 * 1024 ? `${Math.max(1, Math.round(n / 1024))} КБ` : `${(n / 1024 / 1024).toFixed(1)} МБ`);
+export const nextOf = (p: Project) => p.next_step || p.passport?.next?.[0] || '';

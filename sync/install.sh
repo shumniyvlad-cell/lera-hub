@@ -6,6 +6,7 @@ cd "$(dirname "$0")"
 D="$HOME/.config/shturman"
 mkdir -p "$D" "$HOME/Library/Logs"
 cp sync.mjs map.json "$D/"
+mkdir -p "$D/passports" && { cp passports/*.json "$D/passports/" 2>/dev/null || true; }
 PL="$HOME/Library/LaunchAgents/ru.marchvlv.shturman-sync.plist"
 cat > "$PL" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>

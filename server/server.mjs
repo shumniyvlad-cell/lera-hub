@@ -4,6 +4,7 @@
 import http from "node:http";
 import { DatabaseSync } from "node:sqlite";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { mkdirSync, writeFileSync, createReadStream, unlinkSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -76,10 +77,28 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     at TEXT NOT NULL, who TEXT NOT NULL, project_id TEXT NOT NULL DEFAULT '', text TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS files (
+    id TEXT PRIMARY KEY, project_id TEXT NOT NULL, name TEXT NOT NULL, label TEXT NOT NULL DEFAULT '',
+    size INTEGER NOT NULL, mime TEXT NOT NULL DEFAULT 'application/octet-stream', sha TEXT NOT NULL,
+    source TEXT NOT NULL, created_at TEXT NOT NULL
+  );
   CREATE TABLE IF NOT EXISTS sync_runs (
     id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, added INTEGER NOT NULL, updated INTEGER NOT NULL
   );
 `);
+
+for (const [col, def] of [["passport", "'{}'"], ["access", "'[]'"], ["mem_links", "'[]'"]]) {
+  if (!db.prepare("PRAGMA table_info(projects)").all().some((c) => c.name === col)) {
+    db.exec(`ALTER TABLE projects ADD COLUMN ${col} TEXT NOT NULL DEFAULT ${def}`);
+    // ссылки из памяти раньше лежали в links — переносим, links остаются только для ручных ссылок Леры
+    if (col === "mem_links") db.exec("UPDATE projects SET mem_links = links, links = '[]' WHERE source = 'memory'");
+  }
+}
+const FILES_DIR = process.env.FILES_DIR || join(dirname(DB_PATH), "files");
+mkdirSync(FILES_DIR, { recursive: true });
+const MAX_FILE = 30 * 1024 * 1024;
+const MIME = { pdf: "application/pdf", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp", txt: "text/plain; charset=utf-8", md: "text/markdown; charset=utf-8", zip: "application/zip", mp3: "audio/mpeg", csv: "text/csv; charset=utf-8" };
 
 const now = () => new Date().toISOString();
 const sha = (s) => createHash("sha256").update(String(s)).digest();
@@ -97,7 +116,7 @@ const q = {
   projects: db.prepare("SELECT * FROM projects WHERE status != 'purged' ORDER BY updated_at DESC"),
   purged: db.prepare("SELECT id, title, kind, client, drop_reason, dropped_at, purged_at FROM projects WHERE status = 'purged' ORDER BY purged_at DESC LIMIT 200"),
   project: db.prepare("SELECT * FROM projects WHERE id = ?"),
-  projectAdd: db.prepare(`INSERT INTO projects (id, title, kind, client, stage, status, summary, body, links, files, next_step, source, is_fresh, mem_updated_at, synced_at, created_at, updated_at)
+  projectAdd: db.prepare(`INSERT INTO projects (id, title, kind, client, stage, status, summary, body, mem_links, files, next_step, source, is_fresh, mem_updated_at, synced_at, created_at, updated_at)
     VALUES (@id, @title, @kind, @client, @stage, @status, @summary, @body, @links, @files, @next_step, @source, @is_fresh, @mem_updated_at, @synced_at, @now, @now)`),
   items: db.prepare("SELECT * FROM items WHERE status != 'done' OR done_at >= ? OR date >= ? ORDER BY date, id"),
   item: db.prepare("SELECT * FROM items WHERE id = ?"),
@@ -108,6 +127,11 @@ const q = {
   log: db.prepare("INSERT INTO activity (at, who, project_id, text) VALUES (?, ?, ?, ?)"),
   lastSync: db.prepare("SELECT * FROM sync_runs ORDER BY id DESC LIMIT 1"),
   syncRun: db.prepare("INSERT INTO sync_runs (at, added, updated) VALUES (?, ?, ?)"),
+  filesAll: db.prepare("SELECT id, project_id, name, label, size, mime, sha, source, created_at FROM files ORDER BY created_at"),
+  fileGet: db.prepare("SELECT * FROM files WHERE id = ?"),
+  fileBySha: db.prepare("SELECT id FROM files WHERE project_id = ? AND sha = ?"),
+  fileAdd: db.prepare("INSERT INTO files (id, project_id, name, label, size, mime, sha, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"),
+  fileDel: db.prepare("DELETE FROM files WHERE id = ?"),
   dropped: db.prepare("SELECT id, title, kind, client, files, drop_reason, dropped_at FROM projects WHERE status = 'dropped' ORDER BY dropped_at"),
 };
 
@@ -150,7 +174,7 @@ function send(res, code, data, origin) {
 }
 
 function projectOut(p) {
-  return { ...p, links: J(p.links, []), files: J(p.files, []), checklist: J(p.checklist, []), is_fresh: !!p.is_fresh };
+  return { ...p, links: J(p.links, []), mem_links: J(p.mem_links, []), files: J(p.files, []), checklist: J(p.checklist, []), passport: J(p.passport, {}), access: J(p.access, []), is_fresh: !!p.is_fresh };
 }
 
 function validKindStage(kind, stage) {
@@ -168,6 +192,40 @@ function sanitizeLinks(list) {
     .filter((l) => /^https?:\/\//.test(l.url)));
 }
 
+function sanitizeAccess(list) {
+  return JSON.stringify(list.slice(0, 40).map((a) => ({ id: clip(a.id || randomBytes(4).toString("hex"), 16), label: clip(a.label, 120), url: clip(a.url, 500),
+    login: clip(a.login, 200), password: clip(a.password, 300), note: clip(a.note, 500) })).filter((a) => a.label || a.login || a.password));
+}
+function sanitizePassport(p) {
+  const arr = (v, n, f) => (Array.isArray(v) ? v.slice(0, n).map(f) : []);
+  const str = (v, n) => clip(typeof v === "string" ? v : "", n);
+  return JSON.stringify({
+    about: str(p.about, 3000), offer: str(p.offer, 2000), status: str(p.status, 2000), money: str(p.money, 2000), updated: str(p.updated, 20),
+    done: arr(p.done, 60, (x) => str(x, 600)), next: arr(p.next, 30, (x) => str(x, 600)),
+    contacts: arr(p.contacts, 20, (c) => ({ label: str(c.label, 80), value: str(c.value, 200), url: /^https?:\/\/|^mailto:|^tel:/.test(c.url || "") ? str(c.url, 500) : "" })),
+    links: arr(p.links, 40, (l) => ({ label: str(l.label, 120), url: str(l.url, 500), note: str(l.note, 300), ok: l.ok !== false })).filter((l) => /^https?:\/\//.test(l.url)),
+    access: arr(p.access, 40, (a) => ({ label: str(a.label, 120), url: str(a.url, 500), login: str(a.login, 200), password: str(a.password, 300), note: str(a.note, 500) })),
+    where: arr(p.where, 30, (w) => ({ label: str(w.label, 120), value: str(w.value, 500) })),
+  });
+}
+function saveFile(projectId, name, label, buf, source) {
+  const sha = createHash("sha256").update(buf).digest("hex");
+  const dup = q.fileBySha.get(projectId, sha);
+  if (dup) return q.fileGet.get(dup.id);
+  const id = randomBytes(9).toString("base64url");
+  const clean = clip(name, 160).replace(/[\\/\0]/g, "_") || "file";
+  const ext = (clean.split(".").pop() || "").toLowerCase();
+  writeFileSync(join(FILES_DIR, id), buf);
+  q.fileAdd.run(id, projectId, clean, clip(label, 200), buf.length, MIME[ext] || "application/octet-stream", sha, source, now());
+  return q.fileGet.get(id);
+}
+async function readRaw(req, limit) {
+  const chunks = []; let size = 0;
+  for await (const c of req) { size += c.length; if (size > limit) throw Object.assign(new Error("too big"), { code: 413 }); chunks.push(c); }
+  return Buffer.concat(chunks);
+}
+const hdr = (req, k) => { try { return decodeURIComponent(String(req.headers[k] || "")); } catch { return ""; } };
+
 function state(user) {
   const since = new Date(Date.now() - 14 * 86400_000).toISOString().slice(0, 10);
   return {
@@ -177,6 +235,7 @@ function state(user) {
     purged: q.purged.all(),
     items: q.items.all(since, since),
     activity: q.activity.all(),
+    attachments: q.filesAll.all(),
     lastSync: q.lastSync.get() || null,
     serverTime: now(),
   };
@@ -212,7 +271,7 @@ function syncIn(body) {
         added++;
       } else if (ex.status !== "purged") {
         const changed = memAt && memAt !== ex.mem_updated_at;
-        db.prepare(`UPDATE projects SET summary = ?, body = ?, links = ?, files = ?, mem_updated_at = ?, synced_at = ?,
+        db.prepare(`UPDATE projects SET summary = ?, body = ?, mem_links = ?, files = ?, mem_updated_at = ?, synced_at = ?,
           is_fresh = CASE WHEN ? THEN 1 ELSE is_fresh END, updated_at = CASE WHEN ? THEN ? ELSE updated_at END WHERE id = ?`)
           .run(clip(g.summary, 2000), clip(g.body, 20000), links, files, memAt || ex.mem_updated_at, t, changed ? 1 : 0, changed ? 1 : 0, t, id);
         if (changed) { q.log.run(t, "claude", id, "Claude обновил заметки по проекту"); updated++; }
@@ -240,6 +299,7 @@ function patchProject(user, id, b) {
   if (typeof b.notes === "string") next.notes = clip(b.notes, 20000);
   if (b.checklist) next.checklist = sanitizeChecklist(b.checklist);
   if (b.links) next.links = sanitizeLinks(b.links);
+  if (Array.isArray(b.access)) next.access = sanitizeAccess(b.access);
   if (b.seen) next.is_fresh = 0;
   const kind = KINDS.includes(b.kind) ? b.kind : next.kind;
   const stage = typeof b.stage === "string" ? b.stage : (kind !== next.kind ? STAGES[kind][0] : next.stage);
@@ -262,8 +322,8 @@ function patchProject(user, id, b) {
     next.is_fresh = 0;
   }
   db.prepare(`UPDATE projects SET title=@title, client=@client, kind=@kind, stage=@stage, status=@status, next_step=@next_step,
-    notes=@notes, checklist=@checklist, links=@links, is_fresh=@is_fresh, drop_reason=@drop_reason, dropped_at=@dropped_at, updated_at=@updated_at WHERE id=@id`)
-    .run(pick({ ...next, updated_at: t }, ["title", "client", "kind", "stage", "status", "next_step", "notes", "checklist", "links", "is_fresh", "drop_reason", "dropped_at", "updated_at", "id"]));
+    notes=@notes, checklist=@checklist, links=@links, access=@access, is_fresh=@is_fresh, drop_reason=@drop_reason, dropped_at=@dropped_at, updated_at=@updated_at WHERE id=@id`)
+    .run(pick({ ...next, updated_at: t }, ["title", "client", "kind", "stage", "status", "next_step", "notes", "checklist", "links", "access", "is_fresh", "drop_reason", "dropped_at", "updated_at", "id"]));
   for (const n of notes) q.log.run(t, user.login, id, n);
   return projectOut(q.project.get(id));
 }
@@ -323,7 +383,7 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(204, {
       "access-control-allow-origin": origin || "null",
       "access-control-allow-methods": "GET,POST,PATCH,DELETE,OPTIONS",
-      "access-control-allow-headers": "authorization,content-type",
+      "access-control-allow-headers": "authorization,content-type,x-file-name,x-file-label",
       "access-control-max-age": "86400",
       vary: "Origin",
     });
@@ -350,6 +410,24 @@ const server = http.createServer(async (req, res) => {
           q.log.run(t, "vlad", id, "Влад удалил проект из памяти Claude");
         }
         return send(res, 200, { ok: true, purged: ids.length }, "");
+      }
+      if (path === "/sync/passport" && req.method === "POST") {
+        const b = await readJson(req, 2_000_000);
+        const p = q.project.get(clip(b.id, 80));
+        if (!p || p.status === "purged") return send(res, 404, { error: "no project" }, "");
+        const pass = sanitizePassport(b.passport || {});
+        if (pass !== p.passport) {
+          db.prepare("UPDATE projects SET passport = ?, updated_at = ? WHERE id = ?").run(pass, now(), p.id);
+          if (p.passport === "{}") q.log.run(now(), "claude", p.id, "Claude собрал паспорт проекта");
+        }
+        const have = new Set(db.prepare("SELECT sha FROM files WHERE project_id = ?").all(p.id).map((r) => r.sha));
+        return send(res, 200, { ok: true, have: [...have] }, "");
+      }
+      if (path === "/sync/file" && req.method === "POST") {
+        const pid = clip(url.searchParams.get("project"), 80);
+        if (!q.project.get(pid)) return send(res, 404, { error: "no project" }, "");
+        const f = saveFile(pid, hdr(req, "x-file-name"), hdr(req, "x-file-label"), await readRaw(req, MAX_FILE), "claude");
+        return send(res, 200, f, "");
       }
       if (path === "/sync/note" && req.method === "POST") {
         const it = addItem({ login: "vlad", role: "vlad" }, await readJson(req));
@@ -388,6 +466,30 @@ const server = http.createServer(async (req, res) => {
     if (m && req.method === "PATCH") {
       const p = patchProject(user, m[1], await readJson(req));
       return p ? send(res, 200, p, origin) : send(res, 404, { error: "Проект не найден" }, origin);
+    }
+
+    m = /^\/projects\/([A-Za-z0-9_-]+)\/files$/.exec(path);
+    if (m && req.method === "POST") {
+      if (!q.project.get(m[1])) return send(res, 404, { error: "Проект не найден" }, origin);
+      const f = saveFile(m[1], hdr(req, "x-file-name"), hdr(req, "x-file-label"), await readRaw(req, MAX_FILE), user.login);
+      q.log.run(now(), user.login, m[1], `Загружен файл ${f.name}`);
+      return send(res, 200, f, origin);
+    }
+    m = /^\/files\/([A-Za-z0-9_-]+)$/.exec(path);
+    if (m && req.method === "GET") {
+      const f = q.fileGet.get(m[1]);
+      if (!f || !existsSync(join(FILES_DIR, f.id))) return send(res, 404, { error: "Файл не найден" }, origin);
+      res.writeHead(200, { "content-type": f.mime, "content-length": f.size, "cache-control": "private, no-store", vary: "Origin",
+        "content-disposition": `attachment; filename*=UTF-8''${encodeURIComponent(f.name)}`, ...(origin ? { "access-control-allow-origin": origin, "access-control-expose-headers": "content-disposition" } : {}) });
+      return createReadStream(join(FILES_DIR, f.id)).pipe(res);
+    }
+    if (m && req.method === "DELETE") {
+      const f = q.fileGet.get(m[1]);
+      if (!f) return send(res, 404, { error: "Файл не найден" }, origin);
+      if (f.source === "claude") return send(res, 403, { error: "Файлы от Claude обновляются сами, их не удаляем" }, origin);
+      q.fileDel.run(f.id); try { unlinkSync(join(FILES_DIR, f.id)); } catch { /* уже нет */ }
+      q.log.run(now(), user.login, f.project_id, `Удалён файл ${f.name}`);
+      return send(res, 200, { ok: true }, origin);
     }
 
     if (path === "/items" && req.method === "POST") {

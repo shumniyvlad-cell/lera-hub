@@ -102,3 +102,14 @@ export function setMode(m: Mode) {
   try { localStorage.setItem('shturman:mode', m); } catch { /* пусто */ }
   modeSubs.forEach((f) => f());
 }
+
+export async function uploadFile(projectId: string, file: File) {
+  const f = await api.upload(projectId, file).catch(onFail);
+  patchData((d) => ({...d, attachments: d.attachments.some((x) => x.id === f.id) ? d.attachments : [...d.attachments, f]}));
+  refreshActivitySoon();
+  return f;
+}
+export async function removeFile(id: string) {
+  await api.deleteFile(id).catch(onFail);
+  patchData((d) => ({...d, attachments: d.attachments.filter((x) => x.id !== id)}));
+}

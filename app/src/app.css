@@ -234,3 +234,30 @@ p { text-wrap: pretty; }
 @media (prefers-reduced-motion: reduce) {
   html:not(.motion) .tilt, html:not(.motion) .compass__needle, html:not(.motion) .compass__arc { transition: none; }
 }
+
+/* ── карточка проекта ── */
+.lead { font-size: 17px; line-height: 1.5; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.fact { padding: 14px 16px; border-radius: 16px; background: var(--color-background-muted); box-shadow: inset 0 0 0 1px var(--line); }
+.guide { display: flex; flex-direction: column; gap: 8px; padding: 16px; border-radius: 18px;
+  background: color-mix(in oklab, var(--color-accent) 9%, var(--color-background-muted)); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--color-accent) 25%, transparent); }
+.ticks.is-done > *::before { background: var(--color-text-secondary); }
+.pill { display: inline-flex; gap: 8px; align-items: baseline; padding: 8px 12px; border-radius: 12px; text-decoration: none; color: var(--color-text-primary);
+  background: var(--color-background-muted); box-shadow: inset 0 0 0 1px var(--line); }
+.pill span { color: var(--color-text-secondary); font-size: 13px; }
+a.pill:hover { box-shadow: inset 0 0 0 1px var(--color-accent); }
+.linkrow { display: inline-flex; gap: 6px; align-items: center; color: var(--color-text-primary); text-decoration: none; }
+.linkrow svg { width: 15px; height: 15px; color: var(--color-text-secondary); }
+.linkrow:hover b { text-decoration: underline; text-decoration-color: var(--color-accent); text-underline-offset: 3px; }
+.filebtn { flex: 1; min-width: 0; display: flex; gap: 12px; align-items: center; padding: 4px 0; border: 0; background: none; cursor: pointer; text-align: left; font: inherit; color: var(--color-text-primary); }
+.filebtn svg { flex: none; width: 34px; height: 34px; padding: 7px; border-radius: 10px; color: var(--color-accent); background: color-mix(in oklab, var(--color-accent) 12%, transparent); }
+.filebtn span { display: grid; min-width: 0; }
+.filebtn b { font-weight: 600; overflow-wrap: break-word; }
+.filebtn small { color: var(--color-text-secondary); font-size: 13px; }
+.filebtn:hover b { text-decoration: underline; text-decoration-color: var(--color-accent); text-underline-offset: 3px; }
+.filebtn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: 10px; }
+.access { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border-radius: 16px; background: var(--color-background-muted); box-shadow: inset 0 0 0 1px var(--line); }
+.access__url { color: var(--color-text-secondary); font-size: 14px; overflow-wrap: anywhere; }
+.access__row > span { width: 64px; flex: none; color: var(--color-text-secondary); font-size: 13px; }
+.access__row code { flex: 1; min-width: 0; overflow-wrap: anywhere; font: 500 14px/1.4 ui-monospace, "SF Mono", Menlo, Consolas, monospace; padding: 6px 10px; border-radius: 10px;
+  background: light-dark(color-mix(in oklab, #0a1a24 5%, transparent), color-mix(in oklab, black 25%, transparent)); }

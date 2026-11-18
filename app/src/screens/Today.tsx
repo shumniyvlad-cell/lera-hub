@@ -9,7 +9,7 @@ import {Badge} from '@astryxdesign/core/Badge';
 import {Icon} from '@astryxdesign/core/Icon';
 import {ChatBubbleLeftEllipsisIcon, CheckCircleIcon} from '@heroicons/react/24/outline';
 import {useData} from '../store';
-import {ago, dayLabel, greeting, KIND_NAME, plural, todayISO} from '../model';
+import {ago, dayLabel, greeting, KIND_NAME, nextOf, plural, todayISO} from '../model';
 import {Block, ItemRow, QuickAdd} from '../parts';
 
 export function Today({onOpen}: {onOpen: (id: string) => void}) {
@@ -21,7 +21,7 @@ export function Today({onOpen}: {onOpen: (id: string) => void}) {
     const tasks = open('task').filter((i) => i.date).sort((a, b) => Number(a.status === 'done') - Number(b.status === 'done') || a.date.localeCompare(b.date) || a.id - b.id);
     const all = [...notes, ...tasks];
     const next = data.projects
-      .filter((p) => p.status === 'active' && p.next_step && !/Пауза/.test(p.stage))
+      .filter((p) => p.status === 'active' && nextOf(p) && !/Пауза/.test(p.stage))
       .sort((a, b) => b.updated_at.localeCompare(a.updated_at));
     const fresh = data.projects.filter((p) => p.status === 'active' && p.is_fresh);
     return {notes, tasks, done: all.filter((i) => i.status === 'done').length, total: all.length, next, fresh,
@@ -90,7 +90,7 @@ export function Today({onOpen}: {onOpen: (id: string) => void}) {
               <List hasDividers edge="outset">
                 {v.next.slice(0, 12).map((p) => (
                   <ListItem key={p.id} itemKey={p.id} label={p.title} onClick={() => onOpen(p.id)}
-                    description={<Text size="sm" color="secondary" maxLines={2}>{p.stage}: {p.next_step}</Text>}
+                    description={<Text size="sm" color="secondary" maxLines={2}>{p.stage}: {nextOf(p)}</Text>}
                     endContent={<Icon icon="chevronRight" size="sm" color="secondary" />} />
                 ))}
               </List>

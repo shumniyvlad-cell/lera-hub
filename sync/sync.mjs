@@ -145,6 +145,39 @@ function arg(name) {
   return i > 0 ? process.argv[i + 1] : undefined;
 }
 
+// ── паспорта проектов: sync/passports/<id>.json (собирает Claude), файлы грузятся по sha один раз ──
+async function pushPassports() {
+  const dir = join(HERE, "passports");
+  if (!existsSync(dir)) return { sent: 0, uploaded: 0, skipped: [] };
+  let sent = 0, uploaded = 0;
+  const skipped = [];
+  for (const f of readdirSync(dir).filter((x) => x.endsWith(".json"))) {
+    let pass;
+    try { pass = JSON.parse(readFileSync(join(dir, f), "utf8")); } catch (e) { skipped.push(`${f}: плохой JSON`); continue; }
+    const id = pass.id || f.replace(/\.json$/, "");
+    const files = (pass.files || []).map((x) => ({ ...x, path: String(x.path || "").replace(/^~(?=\/)/, homedir()) }));
+    let r;
+    try {
+      r = await call("/sync/passport", { method: "POST", body: JSON.stringify({ id, passport: { ...pass, files: undefined } }) });
+    } catch (e) { skipped.push(`${id}: ${e.message.slice(0, 80)}`); continue; }
+    sent++;
+    const have = new Set(r.have);
+    for (const file of files) {
+      let buf;
+      try { buf = readFileSync(file.path); } catch { skipped.push(`${id}: нет доступа к ${basename(file.path)}`); continue; }
+      if (buf.length > 30 * 1024 * 1024) { skipped.push(`${id}: ${basename(file.path)} больше 30 МБ`); continue; }
+      const sha = (await import("node:crypto")).createHash("sha256").update(buf).digest("hex");
+      if (have.has(sha)) continue;
+      const res = await fetch(`${API}/sync/file?project=${encodeURIComponent(id)}`, {
+        method: "POST", body: buf, signal: AbortSignal.timeout(120_000),
+        headers: { "x-sync-key": KEY, "content-type": "application/octet-stream", "x-file-name": encodeURIComponent(basename(file.path)), "x-file-label": encodeURIComponent(file.label || "") },
+      });
+      if (res.ok) { uploaded++; have.add(sha); } else skipped.push(`${id}: ${basename(file.path)} → ${res.status}`);
+    }
+  }
+  return { sent, uploaded, skipped };
+}
+
 // ── удаление памяти после «Не работаем» ──
 function removeFromIndex(files) {
   const f = join(MEM, "MEMORY.md");
@@ -174,6 +207,15 @@ async function main() {
     const r = await call("/sync", { method: "POST", body: JSON.stringify({ projects }) });
     console.log(`${new Date().toLocaleString("ru-RU")}: отправлено ${projects.length}, новых ${r.added}, обновлено ${r.updated}, ждут удаления ${r.dropped.length}`);
     for (const d of r.dropped) console.log(`  · ${d.title} — ${d.drop_reason || "без причины"}`);
+    const pp = await pushPassports();
+    console.log(`паспорта: ${pp.sent}, новых файлов: ${pp.uploaded}${pp.skipped.length ? `, пропущено ${pp.skipped.length}` : ""}`);
+    for (const x of pp.skipped) console.log(`  ! ${x}`);
+    return;
+  }
+  if (cmd === "passports") {
+    const pp = await pushPassports();
+    console.log(`паспорта: ${pp.sent}, новых файлов: ${pp.uploaded}`);
+    for (const x of pp.skipped) console.log(`  ! ${x}`);
     return;
   }
   if (cmd === "dropped") {
