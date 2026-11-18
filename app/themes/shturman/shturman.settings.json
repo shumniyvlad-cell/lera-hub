@@ -1,0 +1,41 @@
+{
+  "name": "shturman",
+  "like": "neutral",
+  "mode": "both",
+  "settings": [
+    {
+      "thing": "font",
+      "value": "system",
+      "source": "dial"
+    },
+    {
+      "thing": "headings",
+      "value": "semibold",
+      "source": "dial",
+      "axis": "weight"
+    },
+    {
+      "thing": "headings",
+      "value": "tight",
+      "source": "dial",
+      "axis": "tracking"
+    },
+    {
+      "thing": "accent",
+      "value": "#0B7A75",
+      "source": "dial"
+    },
+    {
+      "thing": "neutral",
+      "value": "#5F6B78",
+      "source": "dial"
+    },
+    {
+      "thing": "corners",
+      "value": "medium",
+      "source": "dial"
+    }
+  ],
+  "lifted": [],
+  "palette": "c658b235935890df876f9c21e9b88391f2dcb40203388f678a40a7b0d572dba6"
+}

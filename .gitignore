@@ -1,0 +1,8 @@
+ACCESS.txt
+*.env
+*.db
+*.db-*
+node_modules
+dist
+.DS_Store
+sync/map.json

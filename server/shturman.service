@@ -1,0 +1,17 @@
+[Unit]
+Description=Shturman: workspace API for Lera (projects, notes, tracker)
+After=network-online.target
+
+[Service]
+DynamicUser=yes
+StateDirectory=shturman
+EnvironmentFile=/etc/shturman/env
+ExecStart=/usr/bin/node /opt/shturman/server.mjs
+Restart=on-failure
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

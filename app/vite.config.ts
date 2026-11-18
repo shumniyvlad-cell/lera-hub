@@ -1,0 +1,58 @@
+import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite'
+
+// base './' — сайт живёт в подпапке GitHub Pages (/lera-hub/).
+export default defineConfig({
+  base: './',
+  plugins: [react()],
+  resolve: { dedupe: ['react', 'react-dom'] },
+  server: { port: 5208, strictPort: true },
+  // Все компоненты Astryx собираем заранее одним пакетом, иначе Vite пересобирает их на лету
+  // и в странице оказываются две копии React («Invalid hook call»). Новый компонент — дописать сюда.
+  optimizeDeps: {
+    include: [
+      '@astryxdesign/core/AppShell',
+      '@astryxdesign/core/Avatar',
+      '@astryxdesign/core/Badge',
+      '@astryxdesign/core/Banner',
+      '@astryxdesign/core/Button',
+      '@astryxdesign/core/Card',
+      '@astryxdesign/core/CheckboxInput',
+      '@astryxdesign/core/CommandPalette',
+      '@astryxdesign/core/DateInput',
+      '@astryxdesign/core/Dialog',
+      '@astryxdesign/core/Divider',
+      '@astryxdesign/core/Drawer',
+      '@astryxdesign/core/EmptyState',
+      '@astryxdesign/core/Grid',
+      '@astryxdesign/core/HStack',
+      '@astryxdesign/core/Heading',
+      '@astryxdesign/core/Icon',
+      '@astryxdesign/core/Layer',
+      '@astryxdesign/core/Layout',
+      '@astryxdesign/core/List',
+      '@astryxdesign/core/ProgressBar',
+      '@astryxdesign/core/Selector',
+      '@astryxdesign/core/SideNav',
+      '@astryxdesign/core/Skeleton',
+      '@astryxdesign/core/TabList',
+      '@astryxdesign/core/Text',
+      '@astryxdesign/core/TextArea',
+      '@astryxdesign/core/TextInput',
+      '@astryxdesign/core/Toast',
+      '@astryxdesign/core/Token',
+      '@astryxdesign/core/Typeahead',
+      '@astryxdesign/core/VStack',
+      '@astryxdesign/core/astryx.css',
+      '@astryxdesign/core/i18n',
+      '@astryxdesign/core/locales/ru-RU.generated.js',
+      '@astryxdesign/core/reset.css',
+      '@astryxdesign/core/theme',
+      '@heroicons/react/24/outline',
+      'react',
+      'react-dom',
+      'react-dom/client',
+      'react/jsx-runtime',
+    ],
+  },
+})
