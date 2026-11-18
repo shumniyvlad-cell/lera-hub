@@ -92,7 +92,7 @@ function refreshActivitySoon() {
 
 // тема: системная или выбранная, хранится только в этом браузере
 export type Mode = 'system' | 'light' | 'dark';
-let mode: Mode = (() => { try { return (localStorage.getItem('shturman:mode') as Mode) || 'system'; } catch { return 'system'; } })();
+let mode: Mode = (() => { try { return (localStorage.getItem('shturman:mode') as Mode) || 'dark'; } catch { return 'dark'; } })();
 const modeSubs = new Set<() => void>();
 export function useMode() {
   return useSyncExternalStore((f) => (modeSubs.add(f), () => modeSubs.delete(f)), () => mode);

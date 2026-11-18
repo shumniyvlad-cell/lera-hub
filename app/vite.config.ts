@@ -11,6 +11,7 @@ export default defineConfig({
   // и в странице оказываются две копии React («Invalid hook call»). Новый компонент — дописать сюда.
   optimizeDeps: {
     include: [
+      '@astryxdesign/core/BottomSheet',
       '@astryxdesign/core/AppShell',
       '@astryxdesign/core/Avatar',
       '@astryxdesign/core/Badge',

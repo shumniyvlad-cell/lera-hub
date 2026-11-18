@@ -22,20 +22,31 @@
     },
     {
       "thing": "accent",
-      "value": "#0B7A75",
+      "value": "#3CC2B4",
       "source": "dial"
     },
     {
+      "thing": "--color-on-accent",
+      "value": "#04211E",
+      "source": "token"
+    },
+    {
       "thing": "neutral",
-      "value": "#5F6B78",
+      "value": "#56677A",
       "source": "dial"
     },
     {
       "thing": "corners",
-      "value": "medium",
+      "value": "round",
       "source": "dial"
+    },
+    {
+      "thing": "font",
+      "value": "\"Inter Tight\", system-ui, sans-serif",
+      "source": "dial",
+      "on": "heading"
     }
   ],
   "lifted": [],
-  "palette": "c658b235935890df876f9c21e9b88391f2dcb40203388f678a40a7b0d572dba6"
+  "palette": "042336b91d5e70e5e51a0e0eca18d92712dfd2341170bc5ed5466b2081e7e1a4"
 }

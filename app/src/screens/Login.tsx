@@ -4,7 +4,6 @@ import {Heading} from '@astryxdesign/core/Heading';
 import {Text} from '@astryxdesign/core/Text';
 import {TextInput} from '@astryxdesign/core/TextInput';
 import {Button} from '@astryxdesign/core/Button';
-import {Card} from '@astryxdesign/core/Card';
 import {signIn} from '../store';
 
 export function Login() {
@@ -30,25 +29,24 @@ export function Login() {
 
   return (
     <main className="login">
-      <form ref={form} onSubmit={submit} noValidate className="login__form">
-        <Card padding={6} elevation="med">
-          <VStack gap={5}>
-            <VStack gap={2}>
-              <img src="./favicon.svg" width={44} height={44} alt="" />
-              <Heading level={1}>Штурман</Heading>
-              <Text color="secondary">Все проекты Влада, этапы и план на день. Вход для команды.</Text>
-            </VStack>
-            <VStack gap={3}>
-              <TextInput label="Логин" htmlName="login" value={login} onChange={setLogin} autoComplete="username"
-                hasAutoCorrect={false} autoCapitalize="none" width="100%" hasAutoFocus
-                status={err?.field === 'login' ? {type: 'error', message: err.text} : undefined} />
-              <TextInput label="Пароль" type="password" htmlName="password" value={password} onChange={setPassword}
-                autoComplete="current-password" width="100%"
-                status={err?.field === 'password' || err?.field === 'form' ? {type: 'error', message: err.text} : undefined} />
-            </VStack>
-            <Button label="Войти" variant="primary" size="lg" width="100%" type="submit" isLoading={busy} />
+      <img className="login__img" src="./img/sea.webp" srcSet="./img/sea-960.webp 960w, ./img/sea.webp 1536w" sizes="100vw" alt="" width={1536} height={1024} />
+      <form ref={form} onSubmit={submit} noValidate className="login__form glass-photo">
+        <VStack gap={6}>
+          <VStack gap={3}>
+            <img src="./favicon.svg" width={48} height={48} alt="" />
+            <Heading level={1}>Штурман</Heading>
+            <Text>Все проекты Влада, этапы и план на день. Куда плывём, что горит и где что лежит.</Text>
           </VStack>
-        </Card>
+          <VStack gap={3}>
+            <TextInput label="Логин" htmlName="login" value={login} onChange={setLogin} autoComplete="username"
+              hasAutoCorrect={false} autoCapitalize="none" width="100%" hasAutoFocus size="lg"
+              status={err?.field === 'login' ? {type: 'error', message: err.text} : undefined} />
+            <TextInput label="Пароль" type="password" htmlName="password" value={password} onChange={setPassword}
+              autoComplete="current-password" width="100%" size="lg"
+              status={err?.field === 'password' || err?.field === 'form' ? {type: 'error', message: err.text} : undefined} />
+          </VStack>
+          <Button label="Войти" variant="primary" size="lg" width="100%" type="submit" isLoading={busy} />
+        </VStack>
       </form>
     </main>
   );

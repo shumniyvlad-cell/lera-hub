@@ -1,11 +1,8 @@
 import {useMemo} from 'react';
 import {VStack} from '@astryxdesign/core/VStack';
 import {HStack} from '@astryxdesign/core/HStack';
-import {Grid} from '@astryxdesign/core/Grid';
-import {Card} from '@astryxdesign/core/Card';
 import {Text} from '@astryxdesign/core/Text';
 import {Button} from '@astryxdesign/core/Button';
-import {ProgressBar} from '@astryxdesign/core/ProgressBar';
 import {EmptyState} from '@astryxdesign/core/EmptyState';
 import {List, ListItem} from '@astryxdesign/core/List';
 import {Badge} from '@astryxdesign/core/Badge';
@@ -13,8 +10,7 @@ import {Icon} from '@astryxdesign/core/Icon';
 import {ChatBubbleLeftEllipsisIcon, CheckCircleIcon} from '@heroicons/react/24/outline';
 import {useData} from '../store';
 import {ago, dayLabel, greeting, KIND_NAME, plural, todayISO} from '../model';
-import {Block, ItemRow, Page, QuickAdd} from '../parts';
-import {go} from '../App';
+import {Block, ItemRow, QuickAdd} from '../parts';
 
 export function Today({onOpen}: {onOpen: (id: string) => void}) {
   const data = useData();
@@ -33,22 +29,27 @@ export function Today({onOpen}: {onOpen: (id: string) => void}) {
   }, [data, today]);
 
   const isLera = data.me.role === 'lera';
+  const pct = v.total ? Math.round((v.done / v.total) * 100) : 0;
   return (
-    <Page title={`${greeting()}, ${data.me.name}`}
-      sub={`${dayLabel(today, {weekday: 'long', day: 'numeric', month: 'long'})}. ${v.total ? `На сегодня ${v.total} ${plural(v.total, 'дело', 'дела', 'дел')}, сделано ${v.done}.` : 'Дел на сегодня пока нет.'}`}>
-      <Grid columns={{minWidth: 200}} gap={3}>
-        <Stat label="Новое во входящих" value={v.inbox} hint={v.inbox ? 'Изучить и разобрать' : 'Всё разобрано'} onClick={() => go('inbox')} isHot={v.inbox > 0} />
-        <Stat label="Заметки Влада" value={v.notes.filter((n) => n.status !== 'done').length} hint="Ждут ответа или дела" onClick={() => go('notes')} />
-        <Card padding={4}>
-          <VStack gap={2}>
-            <Text color="secondary" size="sm">План дня</Text>
-            <Text className="big" hasTabularNumbers>{v.done}<Text color="secondary" className="big__of"> из {v.total}</Text></Text>
-            <ProgressBar label="Сделано за день" isLabelHidden value={v.total ? (v.done / v.total) * 100 : 0} />
-          </VStack>
-        </Card>
-      </Grid>
+    <VStack className="page" gap={8}>
+      <section className="hero">
+        <img className="hero__img" src="./img/sea.webp" srcSet="./img/sea-960.webp 960w, ./img/sea.webp 1536w" sizes="(max-width: 900px) 100vw, 1200px" alt="" width={1536} height={1024} />
+        <VStack className="hero__text" gap={3}>
+          <p className="hero__date">{dayLabel(today, {weekday: 'long', day: 'numeric', month: 'long'})}</p>
+          <h1 className="hero__title">{greeting()},<br />{data.me.name}</h1>
+          <p className="hero__sub">
+            {v.total ? `На сегодня ${v.total} ${plural(v.total, 'дело', 'дела', 'дел')}. ${v.done ? `Сделано ${v.done}.` : 'Поехали.'}` : 'Дел на сегодня пока нет. Добавь первое ниже.'}
+          </p>
+        </VStack>
+        <Compass pct={pct} done={v.done} total={v.total} />
+        <HStack className="hero__chips" gap={2} wrap="wrap">
+          <a className="chip glass-photo" href="#/inbox"><b>{v.inbox}</b> {plural(v.inbox, 'новый проект', 'новых проекта', 'новых проектов')}</a>
+          <a className="chip glass-photo" href="#/notes"><b>{v.notes.filter((n) => n.status !== 'done').length}</b> от Влада</a>
+          <a className="chip glass-photo" href="#/tracker"><b>{v.done}/{v.total}</b> план дня</a>
+        </HStack>
+      </section>
 
-      <Grid columns={{minWidth: 340}} gap={6} className="split">
+      <section className="split">
         <VStack gap={6}>
           <Block title="От Влада" end={<Button label="Все заметки" variant="ghost" size="sm" href="#/notes" />}>
             {v.notes.length === 0 ? (
@@ -99,23 +100,29 @@ export function Today({onOpen}: {onOpen: (id: string) => void}) {
             Проекты из памяти Claude приходят сами каждый вечер в 21:00. {data.lastSync ? `Последний раз ${ago(data.lastSync.at)}: новых ${data.lastSync.added}, обновлено ${data.lastSync.updated}.` : 'Синка ещё не было.'}
           </Text>
         </VStack>
-      </Grid>
-    </Page>
+      </section>
+    </VStack>
   );
 }
 
-function Stat({label, value, hint, onClick, isHot}: {label: string; value: number; hint: string; onClick: () => void; isHot?: boolean}) {
+function Compass({pct, done, total}: {pct: number; done: number; total: number}) {
+  const r = 62, c = 2 * Math.PI * r;
   return (
-    <Card padding={4} className="tap">
-      <button type="button" className="cover" onClick={onClick} aria-label={`${label}: ${value}`} />
-      <VStack gap={2}>
-        <HStack justify="between" vAlign="center">
-          <Text color="secondary" size="sm">{label}</Text>
-          {isHot && <Badge label="новое" variant="teal" />}
-        </HStack>
-        <Text className="big" hasTabularNumbers>{value}</Text>
-        <Text size="sm" color="secondary">{hint}</Text>
-      </VStack>
-    </Card>
+    <figure className="compass" aria-label={`Курс дня: сделано ${done} из ${total}`}>
+      <svg viewBox="0 0 160 160" width="160" height="160" aria-hidden="true">
+        <circle cx="80" cy="80" r="74" className="compass__rim" />
+        {Array.from({length: 36}, (_, i) => (
+          <line key={i} x1="80" y1={i % 9 === 0 ? 10 : 13} x2="80" y2="18" className={i % 9 === 0 ? 'compass__tick is-major' : 'compass__tick'} transform={`rotate(${i * 10} 80 80)`} />
+        ))}
+        <circle cx="80" cy="80" r={r} className="compass__track" />
+        <circle cx="80" cy="80" r={r} className="compass__arc" strokeDasharray={c} strokeDashoffset={c * (1 - pct / 100)} transform="rotate(-90 80 80)" />
+        <g className="compass__needle" style={{transform: `rotate(${pct * 3.6}deg)`}}>
+          <path d="M80 34 L85 80 L80 86 L75 80 Z" className="compass__north" />
+          <path d="M80 102 L85 80 L80 74 L75 80 Z" className="compass__south" />
+        </g>
+        <circle cx="80" cy="80" r="4" className="compass__hub" />
+      </svg>
+      <figcaption><b>{pct}%</b><span>курс дня</span></figcaption>
+    </figure>
   );
 }

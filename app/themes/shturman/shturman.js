@@ -93,7 +93,7 @@ export const shturmanTheme = {
     "--_astryx-pre-tempo-duration-slow-max": "935ms",
     "--_astryx-motion-tempo": "1",
     "--font-family-body": "system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
-    "--font-family-heading": "system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+    "--font-family-heading": "\"Inter Tight\", system-ui, sans-serif",
     "--font-family-code": "ui-monospace, \"SF Mono\", Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace",
     "--color-syntax-keyword": "light-dark(#6b187c, #efa8ff)",
     "--color-syntax-string": "light-dark(#0b5615, #a4d6a3)",
@@ -114,24 +114,24 @@ export const shturmanTheme = {
     "--color-syntax-diff-header": "transparent",
     "--color-syntax-added-marker": "var(--color-syntax-punctuation)",
     "--color-syntax-removed-marker": "var(--color-syntax-punctuation)",
-    "--color-background-surface": "light-dark(#ffffff, #20262d)",
+    "--color-background-surface": "light-dark(#ffffff, #1e2731)",
     "--color-background-body": "light-dark(#f1f1f1, #1b1b1b)",
-    "--color-background-card": "light-dark(#ffffff, #171c22)",
-    "--color-background-popover": "light-dark(#ffffff, #171c22)",
-    "--color-background-muted": "light-dark(#ebf2f9, #171c22)",
-    "--color-accent": "light-dark(#0b7a75, #63bdb7)",
-    "--color-accent-muted": "light-dark(#a7e2dd, #00524f)",
+    "--color-background-card": "light-dark(#ffffff, #151c25)",
+    "--color-background-popover": "light-dark(#ffffff, #151c25)",
+    "--color-background-muted": "light-dark(#e8f2fd, #151c25)",
+    "--color-accent": "light-dark(#3cc2b4, #3cc2b4)",
+    "--color-accent-muted": "light-dark(#a3e3da, #00534c)",
     "--color-neutral": "light-dark(#0000000F, #ffffff1A)",
     "--color-overlay": "light-dark(#00000080, #000000CC)",
     "--color-overlay-hover": "light-dark(#0000000d, #ffffff0d)",
     "--color-overlay-pressed": "light-dark(#0000001a, #ffffff1a)",
     "--color-text-primary": "light-dark(#000000, #ffffff)",
-    "--color-text-secondary": "light-dark(#3e4853, #959faa)",
-    "--color-text-disabled": "light-dark(#8692a0, #48535f)",
-    "--color-text-accent": "light-dark(#055f5b, #97d4cf)",
+    "--color-text-secondary": "light-dark(#384657, #909fb0)",
+    "--color-text-disabled": "light-dark(#7f91a5, #425162)",
+    "--color-text-accent": "light-dark(#006058, #86d8cd)",
     "--color-on-dark": "#ffffff",
     "--color-on-light": "#111111",
-    "--color-on-accent": "light-dark(#ffffff, #0d1116)",
+    "--color-on-accent": "#04211E",
     "--color-on-success": "light-dark(#ffffff, #111111)",
     "--color-on-error": "light-dark(#ffffff, #111111)",
     "--color-on-warning": "#111111",
@@ -146,10 +146,10 @@ export const shturmanTheme = {
     "--color-on-success-muted": "light-dark(#00490b, #90ca90)",
     "--color-on-warning-muted": "light-dark(#4b3900, #eec448)",
     "--color-on-error-muted": "light-dark(#76000c, #ffaea7)",
-    "--color-icon-accent": "light-dark(#055f5b, #97d4cf)",
+    "--color-icon-accent": "light-dark(#006058, #86d8cd)",
     "--color-icon-primary": "light-dark(#000000, #ffffff)",
-    "--color-icon-secondary": "light-dark(#5f6b78, #959faa)",
-    "--color-icon-disabled": "light-dark(#8692a0, #48535f)",
+    "--color-icon-secondary": "light-dark(#56677a, #909fb0)",
+    "--color-icon-disabled": "light-dark(#7f91a5, #425162)",
     "--color-success": "light-dark(#198100, #64af4c)",
     "--color-warning": "#ffce2f",
     "--color-error": "light-dark(#c9303a, #ff705d)",
@@ -157,8 +157,8 @@ export const shturmanTheme = {
     "--color-error-muted": "light-dark(#ffc4be, #ff98903D)",
     "--color-warning-muted": "light-dark(#fae19e, #e2b6233D)",
     "--color-border": "light-dark(#00000014, #ffffff1a)",
-    "--color-border-emphasized": "light-dark(#ccd6e1, #48535f)",
-    "--color-skeleton": "light-dark(#ebf2f9, #48535f)",
+    "--color-border-emphasized": "light-dark(#c8d6e6, #425162)",
+    "--color-skeleton": "light-dark(#e8f2fd, #425162)",
     "--color-shadow": "light-dark(#0000001A, #0000004D)",
     "--color-tint-hover": "light-dark(#000000, #ffffff)",
     "--color-background-red": "light-dark(#ffc4be, #5b2b28)",
@@ -202,10 +202,10 @@ export const shturmanTheme = {
     "--color-icon-gray": "light-dark(#474747, #9e9e9e)",
     "--color-text-gray": "light-dark(#1b1b1b, #d4d4d4)",
     "--radius-none": "0px",
-    "--radius-inner": "6px",
-    "--radius-element": "10px",
-    "--radius-container": "12px",
-    "--radius-page": "28px",
+    "--radius-inner": "10px",
+    "--radius-element": "16px",
+    "--radius-container": "19px",
+    "--radius-page": "45px",
     "--radius-full": "9999px",
     "--shadow-low": "0 2px 4px light-dark(oklch(0 0 0 / 5%), oklch(0 0 0 / 25%)), 0 4px 8px light-dark(oklch(0 0 0 / 10%), oklch(0 0 0 / 40%)), inset 0 0 0 1px light-dark(transparent, oklch(1 0 0 / 8%))",
     "--shadow-med": "0 2px 4px light-dark(oklch(0 0 0 / 5%), oklch(0 0 0 / 35%)), 0 4px 12px light-dark(oklch(0 0 0 / 10%), oklch(0 0 0 / 50%)), inset 0 0 0 1px light-dark(transparent, oklch(1 0 0 / 12%))",
@@ -215,7 +215,7 @@ export const shturmanTheme = {
     "--shadow-inset-success": "inset 0px 0px 0px 2px #2f7d334D",
     "--shadow-inset-warning": "inset 0px 0px 0px 2px #f8d36a4D",
     "--shadow-inset-error": "inset 0px 0px 0px 2px #de47454D",
-    "--focus-outline-color": "light-dark(#0b7a75, #63bdb7)"
+    "--focus-outline-color": "light-dark(#00988c, #3cc2b4)"
   },
   localTokens: {
     "--astryx-theme-neutral-color-status-fill-accent": "light-dark(#0074e2, #6d9cfe)"
@@ -325,22 +325,22 @@ export const shturmanTheme = {
     },
     "item": {
       "selected": {
-        "--color-text-secondary": "light-dark(#3e4853, #bec8d2)"
+        "--color-text-secondary": "light-dark(#384657, #bbc8d7)"
       }
     },
     "tree-list-item": {
       "selected": {
-        "--color-text-secondary": "light-dark(#3e4853, #bec8d2)"
+        "--color-text-secondary": "light-dark(#384657, #bbc8d7)"
       }
     },
     "file-input": {
       "mode:dropzone": {
-        "--color-text-secondary": "light-dark(#3e4853, #bec8d2)"
+        "--color-text-secondary": "light-dark(#384657, #bbc8d7)"
       }
     },
     "citation": {
       "variant:number": {
-        "--color-text-secondary": "light-dark(#3e4853, #bec8d2)"
+        "--color-text-secondary": "light-dark(#384657, #bbc8d7)"
       }
     },
     "button": {
@@ -402,7 +402,7 @@ export const shturmanTheme = {
     },
     "segmented-control-item": {
       "base": {
-        "--color-text-secondary": "light-dark(#3e4853, #bec8d2)"
+        "--color-text-secondary": "light-dark(#384657, #bbc8d7)"
       },
       "size:sm": {
         "height": "calc(var(--size-element-sm) - 8px)"
@@ -513,8 +513,8 @@ export const shturmanTheme = {
         "fallbacks": "-apple-system, \"Segoe UI\", Roboto, sans-serif"
       },
       "heading": {
-        "family": "system-ui",
-        "fallbacks": "-apple-system, \"Segoe UI\", Roboto, sans-serif",
+        "family": "Inter Tight",
+        "fallbacks": "system-ui, sans-serif",
         "weights": {
           "3": "bold",
           "4": "bold"

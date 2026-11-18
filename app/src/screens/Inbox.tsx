@@ -21,7 +21,7 @@ export function Inbox({onOpen}: {onOpen: (id: string) => void}) {
       ) : (
         <Grid columns={{minWidth: 300}} gap={3}>
           {list.map((p) => (
-            <Card key={p.id} padding={4}>
+            <Card key={p.id} padding={5} className="tilt">
               <VStack gap={3}>
                 <VStack gap={1}>
                   <Text weight="semibold" size="lg">{p.title}</Text>

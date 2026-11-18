@@ -1,11 +1,9 @@
 import {lazy, Suspense, useEffect, useMemo, useState} from 'react';
-import {AppShell} from '@astryxdesign/core/AppShell';
-import {SideNav, SideNavHeading, SideNavItem, SideNavSection} from '@astryxdesign/core/SideNav';
+import {BottomSheet} from '@astryxdesign/core/BottomSheet';
 import {VStack} from '@astryxdesign/core/VStack';
 import {HStack} from '@astryxdesign/core/HStack';
 import {Text} from '@astryxdesign/core/Text';
 import {Button} from '@astryxdesign/core/Button';
-import {Badge} from '@astryxdesign/core/Badge';
 import {Banner} from '@astryxdesign/core/Banner';
 import {Skeleton} from '@astryxdesign/core/Skeleton';
 import {Avatar} from '@astryxdesign/core/Avatar';
@@ -13,13 +11,14 @@ import {CommandPalette} from '@astryxdesign/core/CommandPalette';
 import {createStaticSource} from '@astryxdesign/core/Typeahead';
 import {
   SunIcon, InboxArrowDownIcon, BriefcaseIcon, RocketLaunchIcon, WrenchScrewdriverIcon, CalendarDaysIcon,
-  ChatBubbleLeftEllipsisIcon, BookOpenIcon, ArchiveBoxIcon, MagnifyingGlassIcon, ArrowRightStartOnRectangleIcon, MoonIcon,
+  ChatBubbleLeftEllipsisIcon, BookOpenIcon, ArchiveBoxIcon, MagnifyingGlassIcon, ArrowRightStartOnRectangleIcon, MoonIcon, Bars3Icon,
 } from '@heroicons/react/24/outline';
 import {refresh, setMode, signOut, useData, useLoad, useMode} from './store';
 import {KIND_NAME, todayISO, type Kind} from './model';
 import {Login} from './screens/Login';
 import {Today} from './screens/Today';
 import {useSheetBack} from './useSheetBack';
+import {useTilt} from './useTilt';
 
 const Projects = lazy(() => import('./screens/Projects').then((m) => ({default: m.Projects})));
 const Inbox = lazy(() => import('./screens/Inbox').then((m) => ({default: m.Inbox})));
@@ -52,6 +51,15 @@ export default function App() {
   return <Shell />;
 }
 
+export function Scene() {
+  return (
+    <figure className="scene" aria-hidden="true">
+      <i className="scene__moon" />
+      <i className="scene__beam" />
+    </figure>
+  );
+}
+
 function Booting() {
   return (
     <VStack className="center" gap={3} padding={6} aria-busy="true" aria-label="Загружаем проекты…">
@@ -66,10 +74,13 @@ function Shell() {
   const [route, setRoute] = useState<Route>(fromHash);
   const [openId, setOpenId] = useState<string | null>(null);
   const [isSearch, setIsSearch] = useState(false);
+  const [isMenu, setIsMenu] = useState(false);
   useSheetBack(openId !== null, () => setOpenId(null));
+  useSheetBack(isMenu, () => setIsMenu(false));
+  useTilt();
 
   useEffect(() => {
-    const on = () => { setRoute(fromHash()); document.querySelector('main')?.scrollTo({top: 0}); };
+    const on = () => { setRoute(fromHash()); scrollTo({top: 0}); };
     addEventListener('hashchange', on);
     return () => removeEventListener('hashchange', on);
   }, []);
@@ -105,64 +116,128 @@ function Shell() {
   ), [data.projects]);
 
   const open = (id: string) => setOpenId(id);
-  const item = (r: Route, label: string, icon: typeof SunIcon, n?: number, tone?: 'accent') => (
-    <SideNavItem label={label} icon={icon} isSelected={route === r} href={`#/${r}`}
-      endContent={n ? <Badge label={String(n)} variant={tone ? 'teal' : 'neutral'} /> : undefined} />
-  );
+  const nav: {r: Route; label: string; icon: typeof SunIcon; n?: number; hot?: boolean}[][] = [
+    [
+      {r: 'today', label: 'Сегодня', icon: SunIcon, n: count.today, hot: true},
+      {r: 'inbox', label: 'Входящие', icon: InboxArrowDownIcon, n: count.inbox, hot: true},
+      {r: 'notes', label: 'Заметки Влада', icon: ChatBubbleLeftEllipsisIcon, n: count.notes},
+      {r: 'tracker', label: 'Трекер недели', icon: CalendarDaysIcon},
+    ],
+    [
+      {r: 'client', label: KIND_NAME.client, icon: BriefcaseIcon, n: count.kind('client')},
+      {r: 'own', label: KIND_NAME.own, icon: RocketLaunchIcon, n: count.kind('own')},
+      {r: 'tools', label: KIND_NAME.tools, icon: WrenchScrewdriverIcon, n: count.kind('tools')},
+    ],
+    [
+      {r: 'guide', label: 'Регламент', icon: BookOpenIcon},
+      {r: 'archive', label: 'Не работаем', icon: ArchiveBoxIcon, n: count.dropped},
+    ],
+  ];
+  const GROUPS = ['День', 'Проекты', 'Порядок'];
+  const isProjects = route === 'client' || route === 'own' || route === 'tools';
+  const dock: {r: Route; label: string; icon: typeof SunIcon; n?: number}[] = [
+    {r: 'today', label: 'Сегодня', icon: SunIcon},
+    {r: 'inbox', label: 'Входящие', icon: InboxArrowDownIcon, n: count.inbox},
+    {r: 'client', label: 'Проекты', icon: BriefcaseIcon},
+    {r: 'tracker', label: 'Неделя', icon: CalendarDaysIcon},
+    {r: 'notes', label: 'Заметки', icon: ChatBubbleLeftEllipsisIcon, n: count.notes},
+  ];
 
   return (
     <>
-      <AppShell
-        variant="elevated"
-        contentPadding={0}
-        sideNav={
-          <SideNav
-            header={<SideNavHeading heading="Штурман" icon={<img src="./favicon.svg" width={28} height={28} alt="" />} />}
-            topContent={
-              <Button label="Найти проект" variant="secondary" width="100%" icon={<MagnifyingGlassIcon />}
-                onClick={() => setIsSearch(true)} />
-            }
-            footer={
-              <HStack gap={2} vAlign="center" justify="between" paddingInline={2}>
-                <HStack gap={2} vAlign="center">
-                  <Avatar name={data.me.name} size="sm" tooltip={false} />
-                  <Text weight="medium">{data.me.name}</Text>
-                </HStack>
-                <HStack gap={1}>
-                  <Button label={mode === 'dark' ? 'Светлая тема' : 'Тёмная тема'} variant="ghost" size="sm" isIconOnly
-                    icon={mode === 'dark' ? <SunIcon /> : <MoonIcon />}
-                    onClick={() => setMode(mode === 'dark' ? 'light' : 'dark')} />
-                  <Button label="Выйти" variant="ghost" size="sm" isIconOnly icon={<ArrowRightStartOnRectangleIcon />} onClick={signOut} />
-                </HStack>
-              </HStack>
-            }>
-            <SideNavSection title="День">
-              {item('today', 'Сегодня', SunIcon, count.today, 'accent')}
-              {item('inbox', 'Входящие', InboxArrowDownIcon, count.inbox, 'accent')}
-              {item('notes', 'Заметки Влада', ChatBubbleLeftEllipsisIcon, count.notes)}
-              {item('tracker', 'Трекер недели', CalendarDaysIcon)}
-            </SideNavSection>
-            <SideNavSection title="Проекты">
-              {item('client', KIND_NAME.client, BriefcaseIcon, count.kind('client'))}
-              {item('own', KIND_NAME.own, RocketLaunchIcon, count.kind('own'))}
-              {item('tools', KIND_NAME.tools, WrenchScrewdriverIcon, count.kind('tools'))}
-            </SideNavSection>
-            <SideNavSection title="Порядок">
-              {item('guide', 'Регламент', BookOpenIcon)}
-              {item('archive', 'Не работаем', ArchiveBoxIcon, count.dropped)}
-            </SideNavSection>
-          </SideNav>
-        }>
+      <Scene />
+      <aside className="rail glass" aria-label="Разделы">
+        <a className="brand" href="#/today" aria-label="Штурман, на главную">
+          <img src="./favicon.svg" width={30} height={30} alt="" />
+          <span>Штурман</span>
+        </a>
+        <button type="button" className="find" onClick={() => setIsSearch(true)}>
+          <MagnifyingGlassIcon aria-hidden="true" />
+          <span>Найти проект</span>
+          <kbd>⌘K</kbd>
+        </button>
+        <nav className="rail__nav">
+          {nav.map((group, gi) => (
+            <section key={GROUPS[gi]} aria-label={GROUPS[gi]}>
+              <p className="rail__group">{GROUPS[gi]}</p>
+              {group.map((n) => {
+                const I = n.icon;
+                return (
+                  <a key={n.r} href={`#/${n.r}`} className="navi" aria-current={route === n.r ? 'page' : undefined}>
+                    <I aria-hidden="true" />
+                    <span>{n.label}</span>
+                    {!!n.n && <em className={n.hot ? 'is-hot' : ''}>{n.n}</em>}
+                  </a>
+                );
+              })}
+            </section>
+          ))}
+        </nav>
+        <footer className="rail__me">
+          <Avatar name={data.me.name} size="sm" tooltip={false} />
+          <span>{data.me.name}</span>
+          <Button label={mode === 'light' ? 'Ночная тема' : 'Дневная тема'} variant="ghost" size="sm" isIconOnly
+            icon={mode === 'light' ? <MoonIcon /> : <SunIcon />} onClick={() => setMode(mode === 'light' ? 'dark' : 'light')} />
+          <Button label="Выйти" variant="ghost" size="sm" isIconOnly icon={<ArrowRightStartOnRectangleIcon />} onClick={signOut} />
+        </footer>
+      </aside>
+
+      <header className="topbar glass">
+        <a className="brand" href="#/today" aria-label="Штурман, на главную">
+          <img src="./favicon.svg" width={28} height={28} alt="" />
+          <span>Штурман</span>
+        </a>
+        <HStack gap={1}>
+          <Button label="Найти проект" variant="ghost" isIconOnly icon={<MagnifyingGlassIcon />} onClick={() => setIsSearch(true)} />
+          <Button label="Все разделы" variant="ghost" isIconOnly icon={<Bars3Icon />} onClick={() => setIsMenu(true)} />
+        </HStack>
+      </header>
+
+      <main className="content" id="content">
         <Suspense fallback={<Booting />}>
           {route === 'today' && <Today onOpen={open} />}
           {route === 'inbox' && <Inbox onOpen={open} />}
-          {(route === 'client' || route === 'own' || route === 'tools') && <Projects kind={route} onOpen={open} />}
+          {isProjects && <Projects kind={route} onOpen={open} />}
           {route === 'tracker' && <Tracker onOpen={open} />}
           {route === 'notes' && <Notes onOpen={open} />}
           {route === 'guide' && <Guide />}
           {route === 'archive' && <Archive onOpen={open} />}
         </Suspense>
-      </AppShell>
+      </main>
+
+      <nav className="dock glass" aria-label="Главные разделы">
+        {dock.map((d) => {
+          const I = d.icon;
+          const on = d.r === 'client' ? isProjects : route === d.r;
+          return (
+            <a key={d.r} href={`#/${d.r}`} className="dock__item" aria-current={on ? 'page' : undefined}>
+              <I aria-hidden="true" />
+              <span>{d.label}</span>
+              {!!d.n && <em>{d.n}</em>}
+            </a>
+          );
+        })}
+      </nav>
+
+      <BottomSheet isOpen={isMenu} onOpenChange={setIsMenu} label="Разделы" height="hug">
+        <VStack gap={1} paddingBlockEnd={4}>
+          {nav.flat().map((n) => {
+            const I = n.icon;
+            return (
+              <a key={n.r} href={`#/${n.r}`} className="navi" aria-current={route === n.r ? 'page' : undefined} onClick={() => setIsMenu(false)}>
+                <I aria-hidden="true" /><span>{n.label}</span>{!!n.n && <em>{n.n}</em>}
+              </a>
+            );
+          })}
+          <HStack gap={2} justify="between" vAlign="center" paddingBlockStart={3}>
+            <Text color="secondary">{data.me.name}</Text>
+            <HStack gap={2}>
+              <Button label={mode === 'light' ? 'Ночная тема' : 'Дневная тема'} variant="secondary" size="sm" onClick={() => setMode(mode === 'light' ? 'dark' : 'light')} />
+              <Button label="Выйти" variant="ghost" size="sm" onClick={signOut} />
+            </HStack>
+          </HStack>
+        </VStack>
+      </BottomSheet>
 
       <Suspense fallback={null}>
         <ProjectDrawer id={openId} onClose={() => setOpenId(null)} />

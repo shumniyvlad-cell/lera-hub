@@ -7,7 +7,20 @@
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#16191c" />
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700&display=swap&subset=cyrillic" rel="stylesheet" />
+    <link rel="preload" as="image" href="./img/sea-blur.webp" />
     <title>Штурман</title>
+    <script>
+      // живое движение: по системной настройке или принудительно ?motion=1 (на маке Влада включено «Уменьшить движение»)
+      (function () {
+        var q = new URLSearchParams(location.search).get('motion'), s;
+        try { if (q !== null) localStorage.setItem('shturman:motion', q); s = localStorage.getItem('shturman:motion'); } catch (e) {}
+        var on = s === '1' || (s !== '0' && !matchMedia('(prefers-reduced-motion: reduce)').matches);
+        if (on) document.documentElement.classList.add('motion');
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

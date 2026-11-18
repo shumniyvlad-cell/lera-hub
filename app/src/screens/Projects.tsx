@@ -8,6 +8,7 @@ import {TextInput} from '@astryxdesign/core/TextInput';
 import {Selector} from '@astryxdesign/core/Selector';
 import {Dialog} from '@astryxdesign/core/Dialog';
 import {Heading} from '@astryxdesign/core/Heading';
+import {TabList, Tab} from '@astryxdesign/core/TabList';
 import {useToast} from '@astryxdesign/core/Toast';
 import {MagnifyingGlassIcon, PlusIcon} from '@heroicons/react/24/outline';
 import {createProject, saveProject, useData} from '../store';
@@ -45,6 +46,9 @@ export function Projects({kind, onOpen}: {kind: Kind; onOpen: (id: string) => vo
           <Button label="Новый проект" variant="primary" icon={<PlusIcon />} onClick={() => setIsNew(true)} />
         </HStack>
       }>
+      <TabList value={kind} onChange={(v) => { location.hash = `/${v}`; }} hasDivider>
+        {data.kinds.map((k) => <Tab key={k} value={k} label={KIND_NAME[k]} endContent={<Text size="sm" color="secondary" hasTabularNumbers>{data.projects.filter((p) => p.status === 'active' && p.kind === k).length}</Text>} />)}
+      </TabList>
       <section className="board" aria-label="Этапы">
         {stages.map((stage) => {
           const col = list.filter((p) => p.stage === stage);
@@ -73,14 +77,14 @@ export function Projects({kind, onOpen}: {kind: Kind; onOpen: (id: string) => vo
 export function ProjectCard({p, onOpen}: {p: Project; onOpen: (id: string) => void}) {
   const done = p.checklist.filter((c) => c.done).length;
   return (
-    <article className="pcard tap" draggable onDragStart={(e) => { e.dataTransfer.setData('text/plain', p.id); e.dataTransfer.effectAllowed = 'move'; }}>
+    <article className={`pcard tap tilt${p.is_fresh ? ' is-fresh' : ''}`} draggable onDragStart={(e) => { e.dataTransfer.setData('text/plain', p.id); e.dataTransfer.effectAllowed = 'move'; }}>
       <button type="button" className="cover" onClick={() => onOpen(p.id)} aria-label={`Открыть ${p.title}`} />
       <VStack gap={1}>
         <HStack justify="between" vAlign="start" gap={2}>
           <Text weight="semibold" className="pcard__title">{p.title}</Text>
           {p.is_fresh && <Badge label="новое" variant="teal" />}
         </HStack>
-        {p.client && <Text size="sm" color="secondary" maxLines={1}>{p.client}</Text>}
+        {p.client && !p.title.includes(p.client.split(/[ ,]/)[0]) && <Text size="sm" color="secondary" maxLines={1}>{p.client}</Text>}
         {p.next_step && <Text size="sm" maxLines={2} className="pcard__next">{p.next_step}</Text>}
         {p.checklist.length > 0 && (
           <Text size="sm" color="secondary" hasTabularNumbers>Чек-лист {done} из {p.checklist.length}</Text>

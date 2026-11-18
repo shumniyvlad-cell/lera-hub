@@ -6,3 +6,4 @@ node_modules
 dist
 .DS_Store
 sync/map.json
+sea-source.png
